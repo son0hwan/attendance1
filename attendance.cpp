@@ -67,7 +67,7 @@ class Player {
 public:
 	Player(string name, int id) : name(name), id(id) {
 		point = 0;
-		grade = 0;
+		grade = NULL;
 		trainingDayCnt = 0;
 		weekendCnt = 0;
 	}
@@ -75,19 +75,45 @@ public:
 	void addPoint(int point) {
 		this->point += point;
 	}
-	void setGrade(int grade) {
+	void addTrainingDayCnt() {
+		trainingDayCnt++;
+	}
+	void addWeekendCnt() {
+		weekendCnt++;
+	}
+	void setGrade(Grade *grade) {
 		this->grade = grade;
+	}
+	Grade* getGrade(void) {
+		return grade;
+	}
+	int getPoint(void) {
+		return point;
 	}
 	int getID(void) {
 		return id;
 	}
+	int getTrainingDayCnt(void) {
+		return trainingDayCnt;
+	}
+	int getWeekendCnt(void) {
+		return weekendCnt;
+	}
 	const string& getName(void) {
 		return name;
+	}
+
+	void print() {
+		cout << "NAME : " << name << ", ";
+		cout << "POINT : " << point << ", ";
+		cout << "GRADE : ";
+
+		grade->print();
 	}
 private:
 	string name;
 	int point;
-	int grade;
+	Grade* grade;
 	int id;
 	int trainingDayCnt;
 	int weekendCnt;
@@ -100,8 +126,9 @@ public:
 		gradeList.push_back(new SilverGrade());
 		gradeList.push_back(new GoldGrade());
 	}
-	void input() {
-		ifstream fin{ "attendance_weekday_500.txt" };
+
+	void input(string path) {
+		ifstream fin{ path };
 		for (int i = 0; i < MAX_INPUT_DATA; i++) {
 			string name, day;
 			fin >> name >> day;
@@ -109,10 +136,11 @@ public:
 		}
 
 		for (int id = 1; id <= id_cnt; id++) {
-			points[id] += calculateFinalAddPoint(id);
-			grade[id] = calculateGrade(points[id]);
-
-			printPlayerResult(id, grade[id]);
+			Player* player = playerMapByID[id];
+			
+			player->addPoint(calculateFinalAddPoint(id));
+			player->setGrade(calculateGrade(player->getPoint()));
+			player->print();
 		}
 
 		printRemovedPlayer();
@@ -126,17 +154,13 @@ public:
 	static const int MAX_PLAYER = 100;
 	static const int MAX_INPUT_DATA = 500;
 private:
-	map<string, Player*> playerList;
+	map<string, Player*> playerMapByString;
+	map<int, Player*> playerMapByID;
 	int id_cnt = 0;
 
 	vector<Grade*> gradeList;
 	int idDayData[MAX_PLAYER][MAX_PLAYER];
-	int points[MAX_PLAYER];
-	Grade* grade[MAX_PLAYER];
-	string names[MAX_PLAYER];
 
-	int trainingDayCnt[MAX_PLAYER];
-	int weekendCnt[MAX_PLAYER];
 
 	int convertDayToIndex(string day) {
 		int idx = 0;
@@ -165,15 +189,15 @@ private:
 		return false;
 	}
 
-	int getAddPoint(int id, string day) {
+	int getAddPoint(Player *player, string day) {
 		int addPoint;
 		if (isTrainingDay(day)) {
 			addPoint = TRAINING_ADD_POINT;
-			trainingDayCnt[id] += 1;
+			player->addTrainingDayCnt();
 		}
 		else if (isWeekend(day)) {
 			addPoint = WEEKEND_ADD_POINT;
-			weekendCnt[id] += 1;
+			player->addWeekendCnt();
 		}
 		else
 			addPoint = 1;
@@ -182,34 +206,25 @@ private:
 	}
 
 	bool notRegistered(string name) {
-		return playerList.count(name) == 0;
+		return playerMapByString.count(name) == 0;
 	}
 
 	void registerPlayer(string name) {
 		int cur_id = ++id_cnt;
 		Player* newPlayer = new Player(name, cur_id);
-		playerList.insert({ name, newPlayer });
-		
-		names[id_cnt] = name;
+		playerMapByString.insert({ name, newPlayer });
+		playerMapByID.insert({cur_id, newPlayer});
 	}
 
 	Player* registerAndGetPlayer(string name) {
 		int curIDCnt = id_cnt + 1;
-		if (curIDCnt > MAX_PLAYER)
-			return 0;
+		if (curIDCnt >= MAX_PLAYER)
+			return NULL;
 
 		if (notRegistered(name)) {
 			registerPlayer(name);
 		}
-		return playerList[name];
-	}
-
-	bool isInvalidID(int id) {
-		return id == 0;
-	}
-
-	bool isInvalidDay(int dayIndex) {
-		return dayIndex < 0 || dayIndex >= NUM_OF_DAY;
+		return playerMapByString[name];
 	}
 
 	bool attendTrainingDayOver10(int id) {
@@ -242,17 +257,8 @@ private:
 		return finalGrade;
 	}
 
-	void printPlayerResult(int id, Grade *grade)
-	{
-		cout << "NAME : " << names[id] << ", ";
-		cout << "POINT : " << points[id] << ", ";
-		cout << "GRADE : ";
-
-		grade->print();
-	}
-
-	bool shouldRemoved(int id) {
-		return grade[id]->getID() != 1 && grade[id]->getID() != 2 && trainingDayCnt[id] == 0 && weekendCnt[id] == 0;
+	bool shouldRemoved(Player *player) {
+		return player->getGrade()->getID() != 1 && player->getGrade()->getID() != 2 && player->getTrainingDayCnt() == 0 && player->getWeekendCnt() == 0;
 	}
 
 	void printRemovedPlayer(void) {
@@ -260,9 +266,9 @@ private:
 		std::cout << "Removed player\n";
 		std::cout << "==============\n";
 		for (int id = 1; id <= id_cnt; id++) {
-
-			if (shouldRemoved(id)) {
-				std::cout << names[id] << "\n";
+			Player* player = playerMapByID[id];
+			if (shouldRemoved(player)) {
+				std::cout << player->getName() << "\n";
 			}
 		}
 	}
@@ -275,19 +281,15 @@ private:
 
 		player = registerAndGetPlayer(name);
 		dayIndex = convertDayToIndex(day);
+		if (player == NULL)
+			return;
 
 		id = player->getID();
 
-		if (isInvalidID(id))
-			return;
-
-		if (isInvalidDay(dayIndex))
-			return;
-
-		add_point = getAddPoint(id, day);
+		add_point = getAddPoint(player, day);
 
 		idDayData[id][dayIndex] += 1;
-		points[id] += add_point;
+		player->addPoint(add_point);
 	}
 
 };

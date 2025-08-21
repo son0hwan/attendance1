@@ -22,11 +22,31 @@ TEST(Attendance, checkWholeResult) {
 	
 	ASSERT_TRUE(fileOpen);
 
-	am.input();
+	am.input("attendance_weekday_500.txt");
 
 	std::cout.rdbuf(original_cout_buffer);
 	EXPECT_EQ(captured_output.str(), expected_output);
 }
+
+
+TEST(Attendance, checkInvalidInput) {
+	std::string invalid_input;
+	std::ofstream output_file("invalid_output.txt");
+	AttendenceManager am;
+
+	for (int i = 0; i < 200; i++) {
+		std::string name = "person" + to_string(i);
+		std::string input = name + " monday\n";
+		invalid_input += input;
+	}
+	if (output_file.is_open()) {
+		output_file << invalid_input;
+		output_file.close();
+	}
+
+	am.input("invalid_output.txt");
+}
+
 
 int main(void) {
 	testing::InitGoogleMock();
