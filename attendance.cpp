@@ -11,8 +11,11 @@ struct Node {
 	string w;
 	string wk;
 };
+const int NUM_OF_DAY = 7;
+const string dayStrArray[NUM_OF_DAY] = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"};
 
-map<string, int> id1;
+
+map<string, int> idList;
 int id_cnt = 0;
 
 //dat[사용자ID][요일]
@@ -24,62 +27,65 @@ string names[100];
 int wed[100];
 int weeken[100];
 
-void input2(string w, string wk) {
+int convertDayToIndex(string day) {
+	int idx = 0;
+	for (idx = 0; idx < NUM_OF_DAY; idx++) {
+		if (day == dayStrArray[idx])
+			break;
+	}
+
+	return idx;
+}
+
+bool isTrainingDay(string day) {
+	if (day == "wednesday")
+		return true;
+
+	return false;
+}
+
+bool isWeekend(string day) {
+	if (day == "saturday")
+		return true;
+
+	if (day == "sunday")
+		return true;
+
+	return false;
+}
+
+int getAddPoint(int id, string day) {
+	int addPoint;
+	if (isTrainingDay(day)) {
+		addPoint = 3;
+		wed[id] += 1;
+	}
+	else if (isWeekend(day)) {
+		addPoint = 2;
+		weeken[id] += 1;
+	}
+	else 
+		addPoint = 1;
+
+	return addPoint;
+}
+
+void input2(string name, string day) {
 	//ID 부여
-	if (id1.count(w) == 0) {
-		id1.insert({ w, ++id_cnt });
+	if (idList.count(name) == 0) {
+		idList.insert({ name, ++id_cnt });
 
-		if (w == "Daisy") {
-			int debug = 1;
-		}
-
-		names[id_cnt] = w;
+		names[id_cnt] = name;
 	}
-	int id2 = id1[w];
-
-	//디버깅용
-	if (w == "Daisy") {
-		int debug = 1;
-	}
-
+	int id = idList[name];
 
 	int add_point = 0;
-	int index = 0;
-	if (wk == "monday") {
-		index = 0;
-		add_point++;
-	}
-	if (wk == "tuesday") {
-		index = 1;
-		add_point++;
-	}
-	if (wk == "wednesday") {
-		index = 2;
-		add_point += 3;
-		wed[id2] += 1;
-	}
-	if (wk == "thursday") {
-		index = 3;
-		add_point++;
-	}
-	if (wk == "friday") {
-		index = 4;
-		add_point++;
-	}
-	if (wk == "saturday") {
-		index = 5;
-		add_point += 2;
-		weeken[id2] += 1;
-	}
-	if (wk == "sunday") {
-		index = 6;
-		add_point += 2;
-		weeken[id2] += 1;
-	}
+	int dayIndex = convertDayToIndex(day);
+	add_point = getAddPoint(id, day);
 
 	//사용자ID별 요일 데이터에 1씩 증가
-	dat[id2][index] += 1;
-	points[id2] += add_point;
+	dat[id][dayIndex] += 1;
+	points[id] += add_point;
 }
 
 void input() {
